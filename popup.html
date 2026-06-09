@@ -8,164 +8,220 @@
     :root {
       --red-team-color: #ff5252;
       --blue-team-color: #4285f4;
-      --dark-bg: #2b2b2b;
-      --medium-bg: #3c3c3c;
-      --light-bg: #4a4a4a;
-      --text-color: #e0e0e0;
-      --text-secondary: #a0a0a0;
-      --border-color: #555;
-      --accent-red: #ff7070;
-      --accent-blue: #70a0ff;
+      --dark-bg: #1e1e1e;
+      --medium-bg: #2a2a2a;
+      --light-bg: #353535;
+      --card-bg: #303030;
+      --text-color: #e8e8e8;
+      --text-secondary: #999;
+      --border-color: #484848;
       --success-color: #66bb6a;
       --warning-color: #ffb74d;
       --danger-color: #ef5350;
     }
 
+    * { box-sizing: border-box; }
+
     body {
-      width: 400px;
-      max-height: 550px;
+      width: 560px;
+      max-height: 680px;
       margin: 0;
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--dark-bg);
+      background: var(--dark-bg);
       color: var(--text-color);
       overflow-x: hidden;
+      font-size: 13px;
     }
 
-    .container {
-      padding: 15px;
-    }
+    .container { padding: 18px 20px; }
 
+    /* ── Header ──────────────────────────────────────────────────────── */
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 15px;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
       border-bottom: 1px solid var(--border-color);
-      padding-bottom: 10px;
     }
 
     .header h1 {
       margin: 0;
-      font-size: 20px;
+      font-size: 22px;
       display: flex;
       align-items: center;
+      gap: 10px;
     }
 
-    .header h1 img {
-      margin-right: 8px;
-      width: 24px;
-      height: 24px;
-      border-radius: 15px;
-    }
+    .header h1 img { width: 28px; height: 28px; border-radius: 5px; }
+    #version { font-size: 11px; color: var(--text-secondary); }
 
+    /* ── Mode toggle ─────────────────────────────────────────────────── */
     .toggle-container {
       display: flex;
-      border-radius: 20px;
+      border-radius: 22px;
       overflow: hidden;
       border: 1px solid var(--border-color);
-      margin-bottom: 15px;
+      margin-bottom: 14px;
     }
 
     .toggle-btn {
       flex: 1;
-      padding: 8px 0;
+      padding: 9px 0;
       text-align: center;
       cursor: pointer;
-      transition: all 0.3s ease;
-      font-weight: bold;
+      font-weight: 700;
       font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .toggle-btn.red {
-      background-color: var(--medium-bg);
+      letter-spacing: 0.8px;
+      background: var(--medium-bg);
       color: var(--text-color);
+      transition: background 0.2s, color 0.2s;
+      user-select: none;
     }
 
-    .toggle-btn.blue {
-      background-color: var(--medium-bg);
-      color: var(--text-color);
-    }
+    .toggle-btn.red.active  { background: var(--red-team-color);  color: #fff; }
+    .toggle-btn.blue.active { background: var(--blue-team-color); color: #fff; }
 
-    .toggle-btn.red.active {
-      background-color: var(--red-team-color);
-      color: white;
-    }
-
-    .toggle-btn.blue.active {
-      background-color: var(--blue-team-color);
-      color: white;
-    }
-
+    /* ── Scan button ─────────────────────────────────────────────────── */
     .scan-btn {
       width: 100%;
-      padding: 10px;
+      padding: 12px;
       border: none;
-      border-radius: 4px;
-      margin-bottom: 15px;
+      border-radius: 6px;
+      margin-bottom: 14px;
       cursor: pointer;
-      font-weight: bold;
-      transition: all 0.3s ease;
-      text-transform: uppercase;
+      font-weight: 700;
       font-size: 14px;
-      letter-spacing: 0.5px;
-      color: white;
-      background-color: var(--red-team-color);
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--red-team-color);
+      transition: opacity 0.2s, transform 0.1s;
     }
 
-    .scan-btn:hover {
-      opacity: 0.9;
+    .scan-btn.blue-mode { background: var(--blue-team-color); }
+    .scan-btn:hover     { opacity: 0.88; }
+    .scan-btn:active    { transform: scale(0.99); }
+    .scan-btn:disabled  { background: var(--light-bg); cursor: not-allowed; opacity: 0.55; }
+
+    /* ── Error ───────────────────────────────────────────────────────── */
+    .error-message {
+      display: none;
+      color: var(--danger-color);
+      background: rgba(239, 83, 80, 0.10);
+      border: 1px solid rgba(239, 83, 80, 0.30);
+      border-radius: 5px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      line-height: 1.5;
     }
 
-    .scan-btn.blue-mode {
-      background-color: var(--blue-team-color);
+    /* ── Summary card ────────────────────────────────────────────────── */
+    .summary-card {
+      background: var(--medium-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
     }
 
-    .scan-btn:disabled {
-      background-color: var(--medium-bg);
-      cursor: not-allowed;
-      opacity: 0.7;
+    .summary-label {
+      color: var(--text-secondary);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 5px;
     }
 
-    .results-container {
-      border-top: 1px solid var(--border-color);
-      padding-top: 10px;
+    .summary-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      word-break: break-word;
+      line-height: 1.3;
     }
 
+    .summary-url {
+      font-size: 12px;
+      color: var(--text-secondary);
+      word-break: break-all;
+    }
+
+    .summary-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    /* ── Risk score ──────────────────────────────────────────────────── */
+    .risk-score-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .risk-score-label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+
+    .risk-bar-track {
+      flex: 1;
+      height: 7px;
+      background: var(--light-bg);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .risk-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.45s ease, background 0.45s ease;
+      background: var(--success-color);
+    }
+
+    .risk-score-value { font-size: 13px; font-weight: 700; white-space: nowrap; }
+
+    /* ── Tabs ────────────────────────────────────────────────────────── */
     .tabs {
       display: flex;
-      margin-bottom: 10px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 0;
+      margin-bottom: 12px;
       border-bottom: 1px solid var(--border-color);
+      scrollbar-width: none;
     }
+
+    .tabs::-webkit-scrollbar { display: none; }
 
     .tab {
-      padding: 8px 12px;
+      padding: 9px 13px;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
       position: relative;
       color: var(--text-secondary);
+      white-space: nowrap;
+      transition: color 0.2s;
+      flex-shrink: 0;
+      user-select: none;
     }
 
-    .tab.active {
-      color: var(--text-color);
-    }
+    .tab:hover { color: var(--text-color); }
+    .tab.active { color: var(--text-color); font-weight: 600; }
 
     .tab.active::after {
       content: '';
       position: absolute;
-      bottom: -1px;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background-color: var(--red-team-color);
+      bottom: -1px; left: 0;
+      width: 100%; height: 2px;
+      background: var(--red-team-color);
     }
 
-    .tab.active.blue-mode::after {
-      background-color: var(--blue-team-color);
-    }
+    .tab.active.blue-mode::after { background: var(--blue-team-color); }
 
+    /* ── Badges ──────────────────────────────────────────────────────── */
     .badge {
       display: inline-block;
       min-width: 18px;
@@ -174,170 +230,302 @@
       border-radius: 9px;
       text-align: center;
       font-size: 10px;
-      color: white;
-      margin-left: 5px;
-      padding: 0 3px;
-      box-sizing: border-box;
+      color: #fff;
+      margin-left: 4px;
+      padding: 0 4px;
+      font-weight: 700;
     }
 
-    .badge.critical {
-      background-color: #d32f2f;
-    }
+    .badge.critical { background: #b71c1c; }
+    .badge.high     { background: #e53935; }
+    .badge.medium   { background: #f57c00; }
+    .badge.low      { background: #f9a825; color: #111; }
+    .badge.none     { background: var(--light-bg); color: var(--text-secondary); }
 
-    .badge.high {
-      background-color: #f44336;
-    }
-
-    .badge.medium {
-      background-color: #f57c00;
-    }
-
-    .badge.low {
-      background-color: #ffb74d;
-    }
-
+    /* ── Tab content ─────────────────────────────────────────────────── */
     .tab-content {
       display: none;
-      max-height: 300px;
+      max-height: 340px;
       overflow-y: auto;
-      padding-right: 5px;
+      padding-right: 6px;
     }
 
-    .tab-content.active {
-      display: block;
-    }
+    .tab-content.active { display: block; }
 
+    /* ── Finding card ────────────────────────────────────────────────── */
     .finding {
-      background-color: var(--medium-bg);
-      border-radius: 4px;
-      padding: 10px;
-      margin-bottom: 10px;
-      font-size: 13px;
-      border-left: 3px solid var(--danger-color);
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border-left: 4px solid var(--danger-color);
+      overflow: hidden;
+      transition: border-color 0.15s;
     }
 
+    .finding.open { border-color: var(--border-color); }
+
+    /* Collapsed header — the clickable row */
     .finding-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 5px;
+      gap: 10px;
+      padding: 11px 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
     }
+
+    .finding-header:hover { background: rgba(255,255,255,0.04); }
+
+    .finding-chevron {
+      font-size: 10px;
+      color: var(--text-secondary);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+
+    .finding.open .finding-chevron { transform: rotate(90deg); }
 
     .finding-title {
-      font-weight: bold;
+      font-weight: 700;
+      font-size: 13px;
+      line-height: 1.3;
+      flex: 1;
     }
+
+    .risk-pill {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .risk-pill.critical { background: rgba(183,28,28,0.25); color: #ef9a9a; border: 1px solid #b71c1c; }
+    .risk-pill.high     { background: rgba(229,57,53,0.18); color: #ef9a9a; border: 1px solid #e53935; }
+    .risk-pill.medium   { background: rgba(245,124,0,0.18); color: #ffcc80; border: 1px solid #f57c00; }
+    .risk-pill.low      { background: rgba(249,168,37,0.15); color: #ffe082; border: 1px solid #f9a825; }
+
+    /* Expandable body */
+    .finding-body {
+      display: none;
+      padding: 0 14px 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .finding.open .finding-body { display: block; }
 
     .finding-details {
-      margin-top: 5px;
+      margin-top: 10px;
       color: var(--text-secondary);
+      font-size: 12px;
+      line-height: 1.6;
     }
+
+    .finding-details > div { margin-bottom: 2px; }
 
     .code-snippet {
-      background-color: var(--light-bg);
-      padding: 7px;
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
       overflow-x: auto;
-      max-width: 100%;
-      margin-top: 5px;
-      font-size: 12px;
+      margin-top: 7px;
+      font-size: 11px;
+      word-break: break-all;
+      color: #cdd3de;
+      line-height: 1.5;
     }
 
-    .loading {
-      text-align: center;
-      padding: 20px;
-    }
-
-    .recommendation {
-      background-color: var(--light-bg);
-      padding: 8px;
-      border-radius: 4px;
-      margin-top: 5px;
-      font-size: 12px;
-    }
-
-    .export-btn {
-      background-color: transparent;
-      border: 1px solid var(--border-color);
-      color: var(--text-color);
-      padding: 5px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
+    /* ── Red team attack card ────────────────────────────────────────── */
+    .attack-card {
+      background: rgba(255, 82, 82, 0.06);
+      border: 1px solid rgba(255, 82, 82, 0.22);
+      border-radius: 5px;
+      padding: 10px 12px;
       margin-top: 10px;
-      transition: all 0.3s ease;
     }
 
-    .export-btn:hover {
-      background-color: var(--light-bg);
+    .attack-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #ff8a80;
+      margin-bottom: 6px;
+    }
+
+    .attack-card p {
+      margin: 0 0 8px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #ccc;
+    }
+
+    .attack-card p:last-child { margin-bottom: 0; }
+
+    .payload-list {
+      list-style: none;
+      margin: 0 0 8px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .payload-list li {
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      border-radius: 3px;
+      padding: 4px 8px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 11px;
+      color: #80cbc4;
+      word-break: break-all;
+    }
+
+    .ref-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .ref-link {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: rgba(255,82,82,0.12);
+      border: 1px solid rgba(255,82,82,0.28);
+      color: #ff8a80;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .ref-link:hover { background: rgba(255,82,82,0.22); }
+
+    /* ── Blue team recommendation ────────────────────────────────────── */
+    .recommendation {
+      background: rgba(66, 133, 244, 0.07);
+      border: 1px solid rgba(66, 133, 244, 0.22);
+      border-radius: 5px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 12px;
+      line-height: 1.55;
+      color: #b3c8f8;
+    }
+
+    .recommendation-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: #82b1ff;
+      margin-bottom: 5px;
     }
 
     .no-findings {
       color: var(--text-secondary);
       text-align: center;
-      padding: 20px;
+      padding: 28px 20px;
       font-style: italic;
+      font-size: 13px;
     }
-    
-    /* Scrollbar styling */
-    ::-webkit-scrollbar {
-      width: 8px;
+
+    /* ── Export & loading ────────────────────────────────────────────── */
+    .export-btn {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 7px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 10px;
+      transition: background 0.2s;
     }
-    
-    ::-webkit-scrollbar-track {
-      background: var(--dark-bg);
+
+    .export-btn:hover { background: var(--light-bg); }
+
+    .loading {
+      text-align: center;
+      padding: 24px;
+      color: var(--text-secondary);
+      font-size: 13px;
     }
-    
-    ::-webkit-scrollbar-thumb {
-      background-color: var(--border-color);
-      border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background-color: #777;
-    }
+
+    /* ── Scrollbar ───────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #666; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1><img src="icons/icon48.ico" alt="InfiltraFox Logo"> InfiltraFox</h1>
-      <span id="version">v1.0</span>
-    </div>
+<div class="container">
 
-    <div class="toggle-container">
-      <div class="toggle-btn red active" id="redTeamBtn">Red Team</div>
-      <div class="toggle-btn blue" id="blueTeamBtn">Blue Team</div>
-    </div>
-
-    <button id="scanButton" class="scan-btn">Analyze Page</button>
-
-    <div id="loadingIndicator" class="loading" style="display: none;">
-      Analyzing page for vulnerabilities...
-    </div>
-
-    <div id="resultsContainer" class="results-container" style="display: none;">
-      <div class="tabs">
-        <div class="tab active" data-tab="sqli">SQL Injection <span id="sqliBadge" class="badge">0</span></div>
-        <div class="tab" data-tab="xss">XSS <span id="xssBadge" class="badge">0</span></div>
-        <div class="tab" data-tab="cookies">Cookies <span id="cookiesBadge" class="badge">0</span></div>
-      </div>
-
-      <div id="sqliContent" class="tab-content active">
-        <!-- SQL Injection findings will be added here -->
-      </div>
-
-      <div id="xssContent" class="tab-content">
-        <!-- XSS findings will be added here -->
-      </div>
-
-      <div id="cookiesContent" class="tab-content">
-        <!-- Cookie security findings will be added here -->
-      </div>
-
-      <button id="exportButton" class="export-btn">Export Report</button>
-    </div>
+  <div class="header">
+    <h1><img src="icons/icon48.ico" alt="InfiltraFox Logo"> InfiltraFox</h1>
+    <span id="version">v1.2</span>
   </div>
-  <script src="popup.js"></script>
+
+  <div class="toggle-container">
+    <div class="toggle-btn red active" id="redTeamBtn">⚔ Red Team</div>
+    <div class="toggle-btn blue" id="blueTeamBtn">🛡 Blue Team</div>
+  </div>
+
+  <button id="scanButton" class="scan-btn">Analyze Page</button>
+
+  <div id="loadingIndicator" class="loading" style="display:none;">Analyzing page…</div>
+  <div id="errorMessage" class="error-message"></div>
+
+  <div id="resultsContainer" style="display:none;">
+
+    <div class="summary-card">
+      <div class="summary-label">Last Scan</div>
+      <div id="pageTitle" class="summary-title">No scan yet</div>
+      <div id="pageUrl" class="summary-url">Run analysis on an HTTP or HTTPS page.</div>
+      <div id="scanTimestamp" class="summary-meta"></div>
+      <div id="summaryStats" class="summary-meta"></div>
+      <div class="risk-score-row">
+        <span class="risk-score-label">Risk score</span>
+        <div class="risk-bar-track"><div id="riskBarFill" class="risk-bar-fill" style="width:0%"></div></div>
+        <span id="riskScoreValue" class="risk-score-value">—</span>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="sqli">SQLi <span id="sqliBadge" class="badge none">0</span></div>
+      <div class="tab" data-tab="xss">XSS <span id="xssBadge" class="badge none">0</span></div>
+      <div class="tab" data-tab="cookies">Cookies <span id="cookiesBadge" class="badge none">0</span></div>
+      <div class="tab" data-tab="headers">Headers <span id="headersBadge" class="badge none">0</span></div>
+      <div class="tab" data-tab="mixed">Mixed <span id="mixedBadge" class="badge none">0</span></div>
+      <div class="tab" data-tab="redirects">Redirects <span id="redirectsBadge" class="badge none">0</span></div>
+      <div class="tab" data-tab="sri">SRI <span id="sriBadge" class="badge none">0</span></div>
+    </div>
+
+    <div id="sqliContent"      class="tab-content active"></div>
+    <div id="xssContent"       class="tab-content"></div>
+    <div id="cookiesContent"   class="tab-content"></div>
+    <div id="headersContent"   class="tab-content"></div>
+    <div id="mixedContent"     class="tab-content"></div>
+    <div id="redirectsContent" class="tab-content"></div>
+    <div id="sriContent"       class="tab-content"></div>
+
+    <button id="exportButton" class="export-btn">⬇ Export Report</button>
+  </div>
+
+</div>
+<script src="popup.js"></script>
 </body>
 </html>

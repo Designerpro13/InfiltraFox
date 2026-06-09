@@ -1,34 +1,36 @@
 {
-    "manifest_version": 2,
-    "name": "InfiltraFox",
-    "version": "1.0",
-    "description": "A Firefox extension for web security analysis and vulnerability detection.",
-
-    "icons": {
-      "16": "icons/icon16.ico",
-      "48": "icons/icon48.ico",
-      "128": "icons/icon128.ico"
-    },
-    "browser_action": {
-      "default_popup": "popup.html"
-    },
-    "content_scripts": [
-      {
-        "matches": ["<all_urls>"],
-        "js": ["contentScript.js"]
-      }
-    ],
-    "background":
-      {
-        "scripts": ["background.js"]
-      },
-    
-    "permissions": [
-        "activeTab",
-        "storage",
-        "webNavigation" 
-    ],
-    "optional_permissions": ["<all_urls>"]
-      
-  }
-  
+  "manifest_version": 2,
+  "name": "InfiltraFox",
+  "version": "1.2.0",
+  "description": "A Firefox extension for web security analysis and vulnerability detection.",
+  "icons": {
+    "16": "icons/icon16.ico",
+    "48": "icons/icon48.ico",
+    "128": "icons/icon128.ico"
+  },
+  "browser_action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "contentScript.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "tabs",
+    "<all_urls>"
+  ]
+}

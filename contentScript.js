@@ -1,313 +1,393 @@
 /**
  * InfiltraFox - Content Script
- * Analyzes current webpage for security vulnerabilities
-*/
+ * Analyzes the active page for common security signals.
+ */
 
-// Main vulnerability scanner
 class VulnerabilityScanner {
-    constructor() {
-        this.findings = {
-            sqli: [],
-            xss: [],
-            cookies: []
-        };
-    }
-    
-    // Master scan function
-    async scanPage() {
-        this.scanForSQLi();
-        this.scanForXSS();
-        this.scanForCookieIssues();
-            //EXPRIMENTAL FEATURES
-        // this.scanForCSPIssues();
-        // this.scanForCORSIssues();
-        // this.scanForInfoLeakage();
-        // this.scanForVulnerableLibraries();
-        return this.findings;
-    }
-    
-// _______________________EXPREMENTAL______________________
-    // CSP scanning
-    // scanForCSPIssues() {
-    //     // This requires the webRequest API and proper permissions
-    //     // For now, we'll analyze meta tags for CSP
-    //     const cspMetaTags = document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]');
-        
-    //     if (cspMetaTags.length === 0) {
-    //       this.findings.csp = {
-    //         present: false,
-    //         riskLevel: 'High',
-    //         details: 'No Content Security Policy found. CSP helps prevent XSS attacks by controlling what resources can be loaded.'
-    //       };
-    //       return;
-    //     }
-        
-    //     // Analyze CSP directives
-    //     const cspContent = cspMetaTags[0].getAttribute('content');
-    //     const hasUnsafeInline = cspContent.includes("'unsafe-inline'");
-    //     const hasUnsafeEval = cspContent.includes("'unsafe-eval'");
-    //     const hasWildcards = cspContent.includes('*');
-        
-    //     this.findings.csp = {
-    //       present: true,
-    //       content: cspContent,
-    //       riskLevel: hasUnsafeInline || hasUnsafeEval ? 'Medium' : 'Low',
-    //       details: [],
-    //     };
-        
-    //     if (hasUnsafeInline) {
-    //       this.findings.csp.details.push("CSP allows 'unsafe-inline' which reduces protection against XSS attacks.");
-    //     }
-        
-    //     if (hasUnsafeEval) {
-    //       this.findings.csp.details.push("CSP allows 'unsafe-eval' which can execute potentially dangerous code dynamically.");
-    //     }
-        
-    //     if (hasWildcards) {
-    //       this.findings.csp.details.push("CSP includes wildcards (*) which may weaken the policy's effectiveness.");
-    //     }
-    // }
-    
-    // // scan for CORS misconfigurations
-    // scanForCORSIssues() {
-    // // Look for CORS-related tags
-    // const corsMetaTags = document.querySelectorAll('meta[name="Access-Control-Allow-Origin"]');
-    
-    // if (corsMetaTags.length > 0) {
-    //     const corsValue = corsMetaTags[0].getAttribute('content');
-        
-    //     this.findings.cors = {
-    //     type: 'metaTag',
-    //     value: corsValue,
-    //     riskLevel: corsValue === '*' ? 'High' : 'Medium',
-    //     details: corsValue === '*' ? 
-    //         'CORS policy set to allow all origins (*) in meta tag, which is insecure and may lead to cross-origin attacks.' :
-    //         'CORS policy found in meta tag. Note that CORS should be configured server-side via HTTP headers, not via meta tags.'
-    //     };
-    // } else {
-    //     // Can't fully check CORS without network requests, but we can look for API endpoints
-    //     const scripts = document.querySelectorAll('script');
-    //     const apiEndpoints = [];
-        
-    //     scripts.forEach(script => {
-    //     const content = script.innerHTML;
-        
-    //     // Look for potential API patterns
-    //     const apiPatterns = [
-    //         /\b(api|rest)\b.*\.(get|post|put|delete)\(/i,
-    //         /\bfetch\(['"`]([^'"`]+)['"`]/gi,
-    //         /\burl\s*:\s*['"`]([^'"`]+)['"`]/gi,
-    //         /\bxhr\.open\(['"`]GET['"`],\s*['"`]([^'"`]+)['"`]/gi
-    //     ];
-        
-    //     apiPatterns.forEach(pattern => {
-    //         const matches = content.match(pattern);
-    //         if (matches) {
-    //         apiEndpoints.push(...matches);
-    //         }
-    //     });
-    //     });
-        
-    //     if (apiEndpoints.length > 0) {
-    //     this.findings.cors = {
-    //         type: 'apiDetection',
-    //         apiEndpoints: apiEndpoints.slice(0, 5), // Limit to first 5
-    //         riskLevel: 'Info',
-    //         details: 'Potential API endpoints detected. Consider reviewing CORS settings on the server to prevent cross-origin attacks.'
-    //     };
-    //     }
-    // }
-    // }
-    
-    
-    // SQL Injection scanning
-    scanForSQLi() {
-      // Find all forms, especially login forms
-      const forms = document.querySelectorAll('form');
-      
-      forms.forEach((form, formIndex) => {
-        // Check for POST method (higher risk)
-        const isPostMethod = form.method.toLowerCase() === 'post';
-        
-        // Find input fields
-        const inputs = form.querySelectorAll('input');
-        const hasPasswordField = Array.from(inputs).some(input => input.type === 'password');
-        const hasNoCSRFToken = !Array.from(inputs).some(input => 
-          input.type === 'hidden' && 
-          (input.name.toLowerCase().includes('token') || 
-           input.name.toLowerCase().includes('csrf'))
-        );
-  
-        // Check for input validation attributes
-        const unsafeInputs = Array.from(inputs).filter(input => {
-            // Text inputs without pattern or min/maxlength are potentially vulnerable
-            return (input.type === 'text' || input.type === 'search' || !input.type) && 
-            !input.pattern && 
-                 !input.maxLength;
+  constructor() {
+    this.findings = {
+      meta: {
+        title: document.title || 'Untitled Page',
+        url: window.location.href,
+        forms: document.forms.length,
+        scripts: document.scripts.length,
+        cookieCount: this.getAccessibleCookies().length
+      },
+      sqli: [],
+      xss: [],
+      cookies: [],
+      headers: [],
+      mixedContent: [],
+      openRedirects: [],
+      sri: []
+    };
+  }
+
+  async scanPage() {
+    this.scanForSQLi();
+    this.scanForXSS();
+    this.scanForCookieIssues();
+    this.scanForHeaderIssues();
+    this.scanForMixedContent();
+    this.scanForOpenRedirects();
+    this.scanForSRIIssues();
+    return this.findings;
+  }
+
+  getAccessibleCookies() {
+    return document.cookie.split(';').map(c => c.trim()).filter(Boolean);
+  }
+
+  // ─── SQLi ──────────────────────────────────────────────────────────────────
+
+  scanForSQLi() {
+    const candidateTypes = new Set(['', 'text', 'search', 'email', 'url', 'tel', 'number']);
+
+    Array.from(document.querySelectorAll('form')).forEach((form, formIndex) => {
+      const method = (form.getAttribute('method') || 'get').toLowerCase();
+      const action = form.getAttribute('action') || window.location.href;
+      const inputs = Array.from(form.querySelectorAll('input, textarea'));
+      const hasPasswordField = inputs.some(i => i.type === 'password');
+      const hasNoCSRFToken = !inputs.some(i =>
+        i.type === 'hidden' && /csrf|token|nonce/i.test(`${i.name || ''} ${i.id || ''}`)
+      );
+
+      const unsafeInputs = inputs.filter(i => {
+        const type = (i.getAttribute('type') || '').toLowerCase();
+        return (i.tagName.toLowerCase() === 'textarea' || candidateTypes.has(type))
+          && !i.pattern && !i.maxLength;
+      });
+
+      if (!unsafeInputs.length) return;
+
+      this.findings.sqli.push({
+        formIndex,
+        formId: form.id || null,
+        formAction: action,
+        method: method.toUpperCase(),
+        isPostMethod: method === 'post',
+        hasPasswordField,
+        hasNoCSRFToken,
+        riskLevel: this.sqliRisk({ method, hasPasswordField, hasNoCSRFToken, count: unsafeInputs.length }),
+        unsafeInputs: unsafeInputs.map(i => ({
+          inputName: i.name || null,
+          inputId: i.id || null,
+          inputType: i.tagName.toLowerCase() === 'textarea' ? 'textarea' : (i.type || 'text')
+        }))
+      });
+    });
+  }
+
+  sqliRisk({ method, hasPasswordField, hasNoCSRFToken, count }) {
+    let s = 0;
+    if (method === 'post') s += 2;
+    if (hasPasswordField) s += 2;
+    if (hasNoCSRFToken) s += 2;
+    if (count >= 3) s += 1;
+    return s >= 6 ? 'High' : s >= 3 ? 'Medium' : 'Low';
+  }
+
+  // ─── XSS ───────────────────────────────────────────────────────────────────
+
+  scanForXSS() {
+    const sourcePattern = /location|document\.URL|document\.documentURI|document\.referrer|window\.name|localStorage|sessionStorage/;
+    const sinkPattern = /innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval|setTimeout\s*\(|setInterval\s*\(|Function\s*\(/;
+    const handlerAttrs = ['onclick','onmouseover','onload','onerror','onkeyup','onkeydown','onsubmit','onmouseout','onchange','onfocus','onblur'];
+
+    document.querySelectorAll('script:not([src])').forEach((script, index) => {
+      const content = script.textContent || '';
+      const hasSink = sinkPattern.test(content);
+      const hasSource = sourcePattern.test(content);
+      if (!hasSink && !hasSource) return;
+
+      this.findings.xss.push({
+        type: hasSink && hasSource ? 'domXss' : 'inlineScript',
+        index,
+        content: this.truncate(content),
+        riskLevel: hasSink && hasSource ? 'High' : 'Medium',
+        location: this.getElementPath(script)
+      });
+    });
+
+    document.querySelectorAll('*').forEach(el => {
+      for (const attr of handlerAttrs) {
+        if (!el.hasAttribute(attr)) continue;
+        this.findings.xss.push({
+          type: 'eventHandler',
+          element: el.tagName.toLowerCase(),
+          attribute: attr,
+          content: this.truncate(el.getAttribute(attr) || ''),
+          riskLevel: 'High',
+          location: this.getElementPath(el)
         });
-  
-        if (unsafeInputs.length > 0) {
-          this.findings.sqli.push({
-            formIndex,
-            formId: form.id || null,
-            formAction: form.action || null,
-            isPostMethod,
-            hasPasswordField,
-            hasNoCSRFToken,
-            riskLevel: this.calculateSQLiRiskLevel(isPostMethod, hasPasswordField, hasNoCSRFToken),
-            unsafeInputs: unsafeInputs.map(input => ({
-              inputName: input.name,
-              inputId: input.id,
-              inputType: input.type
-            }))
+      }
+
+      if (el.tagName.toLowerCase() === 'a') {
+        const href = el.getAttribute('href') || '';
+        if (/^\s*javascript:/i.test(href)) {
+          this.findings.xss.push({
+            type: 'javascriptUrl',
+            element: 'a',
+            attribute: 'href',
+            content: this.truncate(href),
+            riskLevel: 'Medium',
+            location: this.getElementPath(el)
           });
         }
+      }
     });
-    }
-  
-    // Calculate SQLi risk level
-    calculateSQLiRiskLevel(isPostMethod, hasPasswordField, hasNoCSRFToken) {
-      if (isPostMethod && hasPasswordField && hasNoCSRFToken) {
-        return 'High';
-    } else if ((isPostMethod && hasPasswordField) || (isPostMethod && hasNoCSRFToken)) {
-        return 'Medium';
-      } else {
-          return 'Low';
-        }
-    }
-  
-    // XSS vulnerability scanning
-    scanForXSS() {
-      // Check for inline scripts
-      const inlineScripts = document.querySelectorAll('script:not([src])');
-      inlineScripts.forEach((script, index) => {
-        this.findings.xss.push({
-          type: 'inlineScript',
-          index,
-          content: script.innerHTML.substring(0, 100) + (script.innerHTML.length > 100 ? '...' : ''),
+  }
+
+  // ─── Cookies ───────────────────────────────────────────────────────────────
+
+  scanForCookieIssues() {
+    this.getAccessibleCookies().forEach(cookie => {
+      const [name] = cookie.split('=');
+      this.findings.cookies.push({
+        name,
+        jsAccessible: true,
+        flags: { httpOnly: false, secure: null, sameSite: null },
+        riskLevel: window.location.protocol === 'https:' ? 'Medium' : 'High',
+        details: 'Cookie readable from JavaScript — HttpOnly is absent. Secure and SameSite cannot be verified from document.cookie.'
+      });
+    });
+  }
+
+  // ─── Security Headers (via <meta http-equiv>) ──────────────────────────────
+
+  scanForHeaderIssues() {
+    const isHttps = window.location.protocol === 'https:';
+
+    // Check meta http-equiv tags for security headers
+    const metaMap = {};
+    document.querySelectorAll('meta[http-equiv]').forEach(m => {
+      metaMap[(m.getAttribute('http-equiv') || '').toLowerCase()] = m.getAttribute('content') || '';
+    });
+
+    // CSP
+    const csp = metaMap['content-security-policy'];
+    if (!csp) {
+      this.findings.headers.push({
+        header: 'Content-Security-Policy',
+        present: false,
+        value: null,
+        riskLevel: 'High',
+        details: 'No CSP meta tag found. Without a CSP the browser places no restrictions on script sources, greatly easing XSS exploitation.'
+      });
+    } else {
+      const issues = [];
+      if (/unsafe-inline/i.test(csp)) issues.push("'unsafe-inline' allows inline scripts");
+      if (/unsafe-eval/i.test(csp)) issues.push("'unsafe-eval' allows eval()");
+      if (/\*/i.test(csp)) issues.push('wildcard (*) permits any source');
+      if (issues.length) {
+        this.findings.headers.push({
+          header: 'Content-Security-Policy',
+          present: true,
+          value: this.truncate(csp, 120),
           riskLevel: 'Medium',
-          location: this.getElementPath(script)
-        });
-      });
-  
-      // Check for event handler attributes
-      const eventHandlerAttrs = [
-        'onclick', 'onmouseover', 'onload', 'onerror', 'onkeyup', 'onkeydown', 
-        'onsubmit', 'onmouseout', 'onchange', 'onfocus', 'onblur'
-      ];
-      
-      const allElements = document.querySelectorAll('*');
-      allElements.forEach(element => {
-        for (const attr of eventHandlerAttrs) {
-          if (element.hasAttribute(attr)) {
-            this.findings.xss.push({
-              type: 'eventHandler',
-              element: element.tagName.toLowerCase(),
-              attribute: attr,
-              content: element.getAttribute(attr),
-              riskLevel: 'High',
-              location: this.getElementPath(element)
-            });
-          }
-        }
-      });
-  
-      // Check for data parameters accepted from URL (potential DOM XSS)
-      const documentLocation = document.location.href;
-      if (documentLocation.includes('?') || documentLocation.includes('#')) {
-        const scriptTags = document.querySelectorAll('script');
-        scriptTags.forEach((script, index) => {
-          const content = script.innerHTML;
-          if (content.includes('location') || 
-              content.includes('document.URL') || 
-              content.includes('document.documentURI') ||
-              content.includes('document.referrer')) {
-            this.findings.xss.push({
-              type: 'domXss',
-              index,
-              content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
-              riskLevel: 'High',
-              location: this.getElementPath(script)
-            });
-          }
+          details: `Weak CSP directives: ${issues.join('; ')}.`
         });
       }
     }
-  
-    // Cookie security analysis
-    scanForCookieIssues() {
-      const cookies = document.cookie.split(';');
-      
-      cookies.forEach(cookie => {
-        // Skip empty cookies
-        if (!cookie.trim()) return;
-        
-        const cookieParts = cookie.trim().split('=');
-        const cookieName = cookieParts[0];
-        
-        // Check if HttpOnly flag exists (can only be inferred from absence in JS-accessible cookies)
-        const missingHttpOnly = true; // If we can see it in JS, it's not HttpOnly
-        
-        // Check if Secure flag exists (can be inferred from document.cookie in HTTPS)
-        const isSecure = document.location.protocol === 'https:';
-        
-        // SameSite can't be directly checked via JS, assume missing for accessible cookies
-        const missingSameSite = true;
-        
-        this.findings.cookies.push({
-          name: cookieName,
-          missingHttpOnly,
-          isSecure,
-          missingSameSite,
-          riskLevel: this.calculateCookieRiskLevel(missingHttpOnly, isSecure, missingSameSite)
-        });
+
+    // X-Frame-Options
+    const xfo = metaMap['x-frame-options'];
+    if (!xfo) {
+      this.findings.headers.push({
+        header: 'X-Frame-Options',
+        present: false,
+        value: null,
+        riskLevel: 'Medium',
+        details: 'No X-Frame-Options meta tag. Page may be embeddable in iframes, enabling clickjacking.'
       });
     }
-  
-    // Calculate cookie risk level
-    calculateCookieRiskLevel(missingHttpOnly, isSecure, missingSameSite) {
-      if (missingHttpOnly && !isSecure && missingSameSite) {
-        return 'Critical';
-      } else if ((missingHttpOnly && !isSecure) || (missingHttpOnly && missingSameSite)) {
-        return 'High';
-      } else if (missingHttpOnly || !isSecure || missingSameSite) {
-        return 'Medium';
-      } else {
-        return 'Low';
+
+    // Referrer-Policy
+    const refMeta = document.querySelector('meta[name="referrer"]');
+    const referrerPolicy = refMeta ? (refMeta.getAttribute('content') || '') : null;
+    if (!referrerPolicy) {
+      this.findings.headers.push({
+        header: 'Referrer-Policy',
+        present: false,
+        value: null,
+        riskLevel: 'Low',
+        details: 'No Referrer-Policy meta tag. The browser default may leak full URLs to third parties.'
+      });
+    } else if (/^(unsafe-url|no-referrer-when-downgrade)$/i.test(referrerPolicy)) {
+      this.findings.headers.push({
+        header: 'Referrer-Policy',
+        present: true,
+        value: referrerPolicy,
+        riskLevel: 'Low',
+        details: `"${referrerPolicy}" can leak sensitive URL parameters to cross-origin destinations.`
+      });
+    }
+
+    // HSTS (only meaningful on HTTPS)
+    if (isHttps) {
+      const hsts = metaMap['strict-transport-security'];
+      if (!hsts) {
+        this.findings.headers.push({
+          header: 'Strict-Transport-Security',
+          present: false,
+          value: null,
+          riskLevel: 'Medium',
+          details: 'No HSTS meta tag on an HTTPS page. Browsers will not enforce HTTPS on subsequent visits via meta policy.'
+        });
       }
     }
-  
-    // Helper to get element path for reporting
-    getElementPath(element) {
-      if (!element) return '';
-      
-      let path = element.tagName.toLowerCase();
-      if (element.id) {
-        path += `#${element.id}`;
-      } else if (element.className) {
-        path += `.${element.className.replace(/\s+/g, '.')}`;
-      }
-      
-      return path;
+
+    // Permissions-Policy / Feature-Policy
+    const pp = metaMap['permissions-policy'] || metaMap['feature-policy'];
+    if (!pp) {
+      this.findings.headers.push({
+        header: 'Permissions-Policy',
+        present: false,
+        value: null,
+        riskLevel: 'Low',
+        details: 'No Permissions-Policy meta tag. Sensitive browser features (camera, microphone, geolocation) remain unrestricted for embedded content.'
+      });
     }
   }
-  
-  // Listen for messages from popup/background scripts
-  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'analyze') {
-      const scanner = new VulnerabilityScanner();
-      scanner.scanPage().then(results => {
-        sendResponse({
-          success: true,
-          results: results
+
+  // ─── Mixed Content ─────────────────────────────────────────────────────────
+
+  scanForMixedContent() {
+    if (window.location.protocol !== 'https:') return;
+
+    const httpPattern = /^http:/i;
+
+    const checks = [
+      { selector: 'script[src]', attr: 'src', type: 'script', riskLevel: 'High' },
+      { selector: 'iframe[src]', attr: 'src', type: 'iframe', riskLevel: 'High' },
+      { selector: 'img[src]', attr: 'src', type: 'image', riskLevel: 'Low' },
+      { selector: 'link[href]', attr: 'href', type: 'stylesheet', riskLevel: 'Medium' },
+      { selector: 'audio[src],video[src]', attr: 'src', type: 'media', riskLevel: 'Low' },
+      { selector: 'object[data]', attr: 'data', type: 'object', riskLevel: 'High' }
+    ];
+
+    checks.forEach(({ selector, attr, type, riskLevel }) => {
+      document.querySelectorAll(selector).forEach(el => {
+        const val = el.getAttribute(attr) || '';
+        if (!httpPattern.test(val)) return;
+        this.findings.mixedContent.push({
+          type,
+          riskLevel,
+          url: this.truncate(val, 120),
+          location: this.getElementPath(el),
+          details: `Active mixed content (${type}) loaded over HTTP on an HTTPS page.`
         });
       });
-      return true; // Indicates async response
+    });
+
+    // Forms posting to http://
+    document.querySelectorAll('form[action]').forEach(form => {
+      const action = form.getAttribute('action') || '';
+      if (httpPattern.test(action)) {
+        this.findings.mixedContent.push({
+          type: 'form',
+          riskLevel: 'High',
+          url: this.truncate(action, 120),
+          location: this.getElementPath(form),
+          details: 'Form submits credentials or data over plain HTTP from an HTTPS page.'
+        });
+      }
+    });
+  }
+
+  // ─── Open Redirects ────────────────────────────────────────────────────────
+
+  scanForOpenRedirects() {
+    const redirectParams = /[?&](url|redirect|redirectUrl|redirect_url|next|return|returnUrl|return_url|goto|dest|destination|forward|continue|target|redir|location|path|callback|ref)=/i;
+
+    const check = (rawUrl, sourceEl) => {
+      if (!rawUrl || !redirectParams.test(rawUrl)) return;
+      try {
+        const url = new URL(rawUrl, window.location.href);
+        const suspiciousParams = Array.from(url.searchParams.entries()).filter(([k]) =>
+          redirectParams.test(`?${k}=`)
+        );
+        if (!suspiciousParams.length) return;
+
+        this.findings.openRedirects.push({
+          riskLevel: 'Medium',
+          url: this.truncate(rawUrl, 120),
+          location: this.getElementPath(sourceEl),
+          params: suspiciousParams.map(([k, v]) => `${k}=${this.truncate(v, 60)}`).join(', '),
+          details: `URL contains a redirect parameter. If the destination value is not validated server-side, an attacker can craft a link that redirects victims to an arbitrary external site.`
+        });
+      } catch (_) { /* relative or invalid URL, skip */ }
+    };
+
+    document.querySelectorAll('a[href]').forEach(a => check(a.getAttribute('href'), a));
+    document.querySelectorAll('form[action]').forEach(f => check(f.getAttribute('action'), f));
+  }
+
+  // ─── Subresource Integrity ─────────────────────────────────────────────────
+
+  scanForSRIIssues() {
+    const isCrossOrigin = src => {
+      try {
+        return new URL(src, window.location.href).origin !== window.location.origin;
+      } catch (_) {
+        return false;
+      }
+    };
+
+    document.querySelectorAll('script[src]').forEach(el => {
+      const src = el.getAttribute('src') || '';
+      if (!isCrossOrigin(src)) return;
+      if (el.getAttribute('integrity')) return;
+
+      this.findings.sri.push({
+        tagType: 'script',
+        riskLevel: 'High',
+        src: this.truncate(src, 120),
+        location: this.getElementPath(el),
+        details: 'External script loaded without an integrity hash. A compromised CDN or MITM attacker could serve malicious JavaScript.'
+      });
+    });
+
+    document.querySelectorAll('link[rel~="stylesheet"][href]').forEach(el => {
+      const href = el.getAttribute('href') || '';
+      if (!isCrossOrigin(href)) return;
+      if (el.getAttribute('integrity')) return;
+
+      this.findings.sri.push({
+        tagType: 'stylesheet',
+        riskLevel: 'Medium',
+        src: this.truncate(href, 120),
+        location: this.getElementPath(el),
+        details: 'External stylesheet loaded without an integrity hash. A tampered stylesheet can exfiltrate data or alter page rendering.'
+      });
+    });
+  }
+
+  // ─── Helpers ───────────────────────────────────────────────────────────────
+
+  truncate(value, limit = 160) {
+    return value.length <= limit ? value : `${value.slice(0, limit)}...`;
+  }
+
+  getElementPath(element) {
+    if (!element) return '';
+    let path = element.tagName.toLowerCase();
+    if (element.id) {
+      path += `#${element.id}`;
+    } else if (typeof element.className === 'string' && element.className.trim()) {
+      path += `.${element.className.trim().replace(/\s+/g, '.')}`;
     }
-  });
-  
-  // Notify that content script is loaded
-  browser.runtime.sendMessage({
-    action: 'contentScriptLoaded',
-    url: window.location.href
-  });
+    return path;
+  }
+}
+
+browser.runtime.onMessage.addListener((message) => {
+  if (message.action === 'analyze') {
+    const scanner = new VulnerabilityScanner();
+    return scanner.scanPage().then(results => ({ success: true, results }));
+  }
+  return undefined;
+});
+
+browser.runtime.sendMessage({ action: 'contentScriptLoaded', url: window.location.href })
+  .catch(() => {});

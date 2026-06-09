@@ -1,118 +1,163 @@
 /**
- * InfiltraFox - Background Script
- * Manages extension state and content script communication
+ * InfiltraFox - Background Service Worker
+ * Maintains scan state and coordinates analysis requests.
  */
 
-// Store current analysis mode
-let analysisMode = 'redTeam'; // Default to Red Team mode
-let lastScanResults = null;
+const STORAGE_KEYS = {
+  analysisMode: 'analysisMode',
+  scanHistory: 'scanHistory',
+  lastScanRecord: 'lastScanRecord'
+};
 
-// Initialize extension when installed
+const DEFAULT_MODE = 'redTeam';
+const MAX_HISTORY = 20;
+
+async function ensureDefaults() {
+  const stored = await browser.storage.local.get([
+    STORAGE_KEYS.analysisMode,
+    STORAGE_KEYS.scanHistory,
+    STORAGE_KEYS.lastScanRecord
+  ]);
+
+  const nextState = {};
+
+  if (!stored[STORAGE_KEYS.analysisMode]) {
+    nextState[STORAGE_KEYS.analysisMode] = DEFAULT_MODE;
+  }
+
+  if (!Array.isArray(stored[STORAGE_KEYS.scanHistory])) {
+    nextState[STORAGE_KEYS.scanHistory] = [];
+  }
+
+  if (!(STORAGE_KEYS.lastScanRecord in stored)) {
+    nextState[STORAGE_KEYS.lastScanRecord] = null;
+  }
+
+  if (Object.keys(nextState).length > 0) {
+    await browser.storage.local.set(nextState);
+  }
+}
+
+async function getCurrentMode() {
+  const stored = await browser.storage.local.get(STORAGE_KEYS.analysisMode);
+  return stored[STORAGE_KEYS.analysisMode] || DEFAULT_MODE;
+}
+
+async function getActiveTab() {
+  const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+  return tabs[0] || null;
+}
+
+function isSupportedTab(tab) {
+  return Boolean(tab && tab.id && tab.url && /^https?:/i.test(tab.url));
+}
+
+async function storeScanRecord(scanRecord) {
+  const stored = await browser.storage.local.get(STORAGE_KEYS.scanHistory);
+  const history = Array.isArray(stored[STORAGE_KEYS.scanHistory])
+    ? stored[STORAGE_KEYS.scanHistory]
+    : [];
+
+  history.push(scanRecord);
+
+  while (history.length > MAX_HISTORY) {
+    history.shift();
+  }
+
+  await browser.storage.local.set({
+    [STORAGE_KEYS.scanHistory]: history,
+    [STORAGE_KEYS.lastScanRecord]: scanRecord
+  });
+}
+
+async function startAnalysis() {
+  const tab = await getActiveTab();
+
+  if (!isSupportedTab(tab)) {
+    return {
+      success: false,
+      error: 'Open a regular HTTP or HTTPS page before running analysis.'
+    };
+  }
+
+  let response;
+
+  try {
+    response = await browser.tabs.sendMessage(tab.id, { action: 'analyze' });
+  } catch (error) {
+    return {
+      success: false,
+      error: `Unable to reach the page scanner: ${error.message}`
+    };
+  }
+
+  if (!response || !response.success) {
+    return {
+      success: false,
+      error: response?.error || 'Page analysis failed.'
+    };
+  }
+
+  const analysisMode = await getCurrentMode();
+  const scanRecord = {
+    timestamp: new Date().toISOString(),
+    url: tab.url,
+    title: tab.title || response.results?.meta?.title || 'Untitled Page',
+    analysisMode,
+    results: response.results
+  };
+
+  await storeScanRecord(scanRecord);
+
+  return {
+    success: true,
+    analysisMode,
+    record: scanRecord,
+    results: response.results
+  };
+}
+
 browser.runtime.onInstalled.addListener(() => {
-  console.log('InfiltraFox extension installed');
-  
-  // Initialize storage with default settings
-  browser.storage.local.set({
-    analysisMode: analysisMode,
-    scanHistory: []
+  ensureDefaults().catch(error => {
+    console.error('Failed to initialize extension state', error);
   });
 });
 
-// Listen for messages from popup or content scripts
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Message received in background:", message);
-  // Handle analysis mode toggle
-  if (message.action === 'setAnalysisMode') {
-    analysisMode = message.mode;
-    browser.storage.local.set({ analysisMode: analysisMode });
-    sendResponse({ success: true, mode: analysisMode });
-  }
-  
-  // Handle scan request from popup
-  else if (message.action === 'startAnalysis') {
-    // Get active tab and trigger content script
-    browser.tabs.query({ active: true, currentWindow: true })
-      .then(tabs => {
-        if (tabs[0]) {
-          browser.tabs.sendMessage(
-            tabs[0].id,
-            { action: 'analyze' }
-          ).then(response => {
-            if (response && response.success) {
-              lastScanResults = response.results;
-              
-              // Add timestamp and URL to results
-              const scanRecord = {
-                timestamp: new Date().toISOString(),
-                url: tabs[0].url,
-                results: response.results
-              };
-              
-              // Update scan history
-              browser.storage.local.get('scanHistory')
-                .then(data => {
-                  const history = data.scanHistory || [];
-                  // Keep last 20 scans
-                  if (history.length >= 20) {
-                    history.shift();
-                  }
-                  history.push(scanRecord);
-                  
-                  browser.storage.local.set({ scanHistory: history });
-                });
-          
-              
-              sendResponse({
-                success: true,
-                results: response.results,
-                analysisMode: analysisMode
-              });
-            } else {
-              sendResponse({
-                success: false, 
-                error: 'Content script analysis failed'
-              });
-            }
-          }).catch(error => {
-            sendResponse({
-              success: false,
-              error: 'Error communicating with content script: ' + error.message
-            });
-          });
-        } else {
-          sendResponse({
-            success: false,
-            error: 'No active tab found'
-          });
-        }
-      });
-    return true; // Indicates async response
-  }
-  
-  // Handle content script loaded notification
-  else if (message.action === 'contentScriptLoaded') {
-    console.log('Content script loaded for: ' + message.url);
-  }
-  
-  // Handle request for last scan results
-  else if (message.action === 'getLastResults') {
-    sendResponse({
-      success: true,
-      results: lastScanResults,
-      analysisMode: analysisMode
-    });
-  }
+browser.runtime.onStartup.addListener(() => {
+  ensureDefaults().catch(error => {
+    console.error('Failed to restore extension state', error);
+  });
 });
 
-// Listen for tab updates to reset the icon state
-browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete') {
-    // Reset icon to default
-    browser.browserAction.setIcon({
-      path: {
-        16: "icons/icon16.png",
-        48: "icons/icon48.png"
-      }
-    });
+browser.runtime.onMessage.addListener((message) => {
+  if (message.action === 'setAnalysisMode') {
+    return browser.storage.local
+      .set({ [STORAGE_KEYS.analysisMode]: message.mode || DEFAULT_MODE })
+      .then(async () => ({
+        success: true,
+        mode: await getCurrentMode()
+      }));
   }
+
+  if (message.action === 'startAnalysis') {
+    return startAnalysis();
+  }
+
+  if (message.action === 'getLastResults') {
+    return Promise.all([
+      getCurrentMode(),
+      browser.storage.local.get(STORAGE_KEYS.lastScanRecord)
+    ]).then(([analysisMode, stored]) => ({
+      success: true,
+      analysisMode,
+      record: stored[STORAGE_KEYS.lastScanRecord] || null,
+      results: stored[STORAGE_KEYS.lastScanRecord]?.results || null
+    }));
+  }
+
+  if (message.action === 'contentScriptLoaded') {
+    console.debug('InfiltraFox content script ready:', message.url);
+  }
+
+  return undefined;
 });
